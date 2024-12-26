@@ -17,14 +17,21 @@ if [ $return_code != 0 ]; then
    apt-get update
    apt-get install -y --no-install-recommends \
 	  python${PYTHON_VERSION} \
-	  python${PYTHON_VERSION}-dev
+	  python${PYTHON_VERSION}-dev \
+     python3-pip \
+     python3-setuptools \
+     python3-distutils
 fi
 
 rm -rf /var/lib/apt/lists/*
 apt-get clean
 
-curl -sS https://bootstrap.pypa.io/get-pip.py | python${PYTHON_VERSION} || \
-curl -sS https://bootstrap.pypa.io/pip/3.6/get-pip.py | python3.6
+#pip3 install --upgrade setuptools
+#python${PYTHON_VERSION} -m pip install --upgrade pip
+
+curl -sS https://bootstrap.pypa.io/get-pip.py | python${PYTHON_VERSION} 
+#|| \
+# curl -sS https://bootstrap.pypa.io/pip/3.8/get-pip.py | python3.8
 
 ln -s /usr/bin/python${PYTHON_VERSION} /usr/local/bin/python3
 #ln -s /usr/bin/pip${PYTHON_VERSION} /usr/local/bin/pip3

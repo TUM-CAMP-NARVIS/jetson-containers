@@ -2,7 +2,8 @@
 import argparse
 import ollama
 
-DEFAULT_MODEL = "smollm2:135m-instruct-q2_K"
+# smollm2:135m-instruct-q2_K
+DEFAULT_MODEL = "smollm2:1.7b"
 DEFAULT_PROMPT = "Test"
 
 parser = argparse.ArgumentParser()

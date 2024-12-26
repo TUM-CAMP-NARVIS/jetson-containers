@@ -299,7 +299,7 @@ CUDA_VERSION = get_cuda_version()
 if L4T_VERSION.major >= 36:    # JetPack 6
     CUDA_ARCHITECTURES = [87]
 elif L4T_VERSION.major >= 34:  # JetPack 5
-    CUDA_ARCHITECTURES = [72, 87]
+    CUDA_ARCHITECTURES = [75]
 elif L4T_VERSION.major == 32:  # JetPack 4
     CUDA_ARCHITECTURES = [53, 62, 72]
 
