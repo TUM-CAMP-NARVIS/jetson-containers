@@ -163,6 +163,6 @@ package = [
     cuda_samples('11.8', requires='==35.*'),
     
     # JetPack 4-5 (CUDA installed in base container)
-    cuda_builtin(CUDA_VERSION, requires='<36'),
-    cuda_samples(CUDA_VERSION, requires='<36'),
+    #cuda_builtin(CUDA_VERSION, requires='<36'),
+    #cuda_samples(CUDA_VERSION, requires='<36'),
 ]

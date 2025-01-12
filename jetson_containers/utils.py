@@ -132,7 +132,7 @@ def sudo_prefix(group='docker'):
         return ""
 
 
-def handle_text_request(url) -> str | None:
+def handle_text_request(url):
     """
     Handles a request to fetch text data from the given URL.
 
