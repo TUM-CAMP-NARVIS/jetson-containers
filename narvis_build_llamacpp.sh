@@ -6,4 +6,4 @@ export PIP_INDEX_URL=http://dev-pi.artekmed.narvis.lan
 export PIP_UPLOAD_REPO=http://dev-pi.artekmed.narvis.lan/jp5/cu118
 export PIP_UPLOAD_USER=jp5
 
-jetson-containers build ollama --build-args "FORCE_BUILD:on"
+jetson-containers build llama_cpp --build-args 'FORCE_BUILD:on'
