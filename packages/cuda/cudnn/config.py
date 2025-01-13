@@ -14,12 +14,17 @@ else:
             CUDNN_VERSION = Version('9.0')
         else:
             CUDNN_VERSION = Version('8.9')
+    elif L4T_VERSION.major >= 35:
+        if CUDA_VERSION >= Version('12.2'):
+            CUDNN_VERSION = Version('8.9')
+        else:
+            CUDNN_VERSION = Version('8.6')
     elif L4T_VERSION.major >= 34:
         CUDNN_VERSION = Version('8.6')
     elif L4T_VERSION.major >= 32:
         CUDNN_VERSION = Version('8.2')
 
-#print(f"-- CUDNN_VERSION={CUDNN_VERSION}")
+print(f"-- CUDNN_VERSION={CUDNN_VERSION}")
        
 def cudnn_package(version, url, deb, packages=None, cuda=None, requires=None):
     """
