@@ -1,0 +1,125 @@
+x-gpu: &gpu
+  runtime: nvidia
+  environment:
+    - NVIDIA_VISIBLE_DEVICES=all
+
+services:
+  # ── Always-on services ──────────────────────────────
+
+  webui:
+    image: dustynv/open-webui:latest
+    container_name: assistant-webui
+    ports:
+      - "8080:8080"
+    environment:
+      - OPENAI_API_BASE_URL=http://vlm:8001/v1
+      - OPENAI_API_KEY=not-needed
+      - WEBUI_SECRET_KEY=jetson-assistant
+      - ENABLE_OPENAI_API=true
+      - AUDIO_STT_ENGINE=openai
+      - AUDIO_STT_OPENAI_API_BASE_URL=http://stt:8000/v1
+      - AUDIO_STT_OPENAI_API_KEY=not-needed
+      - AUDIO_TTS_ENGINE=openai
+      - AUDIO_TTS_OPENAI_API_BASE_URL=http://tts:8880/v1
+      - AUDIO_TTS_OPENAI_API_KEY=not-needed
+    volumes:
+      - webui-data:/app/backend/data
+    depends_on:
+      stt:
+        condition: service_started
+      tts:
+        condition: service_started
+    networks:
+      - assistant-net
+    restart: unless-stopped
+
+  stt:
+    image: dustynv/speaches:latest
+    container_name: assistant-stt
+    <<: *gpu
+    ports:
+      - "8000:8000"
+    volumes:
+      - models-cache:/data/models
+    networks:
+      - assistant-net
+    restart: unless-stopped
+
+  tts:
+    image: dustynv/kokoro-tts:fastapi-latest
+    container_name: assistant-tts
+    <<: *gpu
+    ports:
+      - "8880:8880"
+    environment:
+      - USE_GPU=true
+      - USE_ONNX=false
+    networks:
+      - assistant-net
+    restart: unless-stopped
+
+  # ── VLM services (one active at a time via profiles) ──
+
+  vlm-vila:
+    image: vlm-bridge:vila
+    container_name: assistant-vlm-vila
+    <<: *gpu
+    profiles: ["vila"]
+    ports:
+      - "8001:8001"
+    environment:
+      - VLM_MODEL=vila
+      - VILA_MODEL_PATH=${VILA_MODEL_PATH:-Efficient-Large-Model/VILA1.5-3b}
+      - HUGGING_FACE_HUB_TOKEN=${HUGGINGFACE_TOKEN}
+    volumes:
+      - models-cache:/data/models
+    networks:
+      assistant-net:
+        aliases:
+          - vlm
+    restart: unless-stopped
+
+  vlm-gemma:
+    image: vlm-bridge:gemma
+    container_name: assistant-vlm-gemma
+    <<: *gpu
+    profiles: ["gemma"]
+    ports:
+      - "8001:8001"
+    environment:
+      - VLM_MODEL=gemma
+      - GEMMA_MODEL_ID=${GEMMA_MODEL_ID:-google/gemma-3-4b-it}
+      - HUGGING_FACE_HUB_TOKEN=${HUGGINGFACE_TOKEN}
+    volumes:
+      - models-cache:/data/models
+    networks:
+      assistant-net:
+        aliases:
+          - vlm
+    restart: unless-stopped
+
+  vlm-llava:
+    image: vlm-bridge:llava
+    container_name: assistant-vlm-llava
+    <<: *gpu
+    profiles: ["llava"]
+    ports:
+      - "8001:8001"
+    environment:
+      - VLM_MODEL=llava
+      - LLAVA_MODEL_PATH=${LLAVA_MODEL_PATH:-liuhaotian/llava-v1.5-7b}
+      - HUGGING_FACE_HUB_TOKEN=${HUGGINGFACE_TOKEN}
+    volumes:
+      - models-cache:/data/models
+    networks:
+      assistant-net:
+        aliases:
+          - vlm
+    restart: unless-stopped
+
+networks:
+  assistant-net:
+
+volumes:
+  webui-data:
+  models-cache:
