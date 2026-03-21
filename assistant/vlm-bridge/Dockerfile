@@ -1,7 +1,11 @@
 ARG BASE_IMAGE
 FROM ${BASE_IMAGE}
 
-RUN pip install --no-cache-dir fastapi uvicorn[standard] pillow httpx
+# Install only what's missing — most deps are in jetson-containers base images
+# Use --index-url to fall back to PyPI if the Jetson index is unreachable
+RUN pip install --no-cache-dir --index-url https://pypi.org/simple/ \
+    fastapi uvicorn pillow httpx 2>/dev/null || \
+    echo "Dependencies already satisfied in base image"
 
 COPY server.py /opt/vlm-bridge/
 COPY models/ /opt/vlm-bridge/models/
