@@ -49,9 +49,40 @@ for vlm in vila gemma llava; do
     fi
 done
 
-# Step 3: Resolve image tags for docker-compose
+# Step 3: Resolve image tags and write to .env
 echo ""
-echo "── Step 3: Setup complete ──"
+echo "── Step 3: Resolving image tags ──"
+cd "$SCRIPT_DIR"
+
+resolve_tag() {
+    local pkg="$1"
+    # autotag returns the best matching image (local > registry > build)
+    # Use --quiet and pipe to avoid interactive prompts
+    local tag
+    tag=$(autotag "$pkg" --quiet 2>/dev/null || docker images --format '{{.Repository}}:{{.Tag}}' | grep "$pkg" | head -1 || echo "")
+    echo "$tag"
+}
+
+WEBUI_TAG=$(resolve_tag open-webui)
+STT_TAG=$(resolve_tag speaches)
+TTS_TAG=$(resolve_tag kokoro-tts:fastapi)
+
+# Append resolved tags to .env (avoiding duplicates)
+for var_line in \
+    "OPEN_WEBUI_IMAGE=$WEBUI_TAG" \
+    "SPEACHES_IMAGE=$STT_TAG" \
+    "KOKORO_TTS_IMAGE=$TTS_TAG"; do
+    var_name="${var_line%%=*}"
+    # Remove old entry if present, then append
+    sed -i "/^${var_name}=/d" "$SCRIPT_DIR/.env" 2>/dev/null || true
+    if [ -n "${var_line#*=}" ]; then
+        echo "$var_line" >> "$SCRIPT_DIR/.env"
+    fi
+done
+
+echo "Resolved tags written to .env"
+echo ""
+echo "── Step 4: Setup complete ──"
 echo ""
 echo "Usage:"
 echo "  cd $SCRIPT_DIR"
