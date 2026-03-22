@@ -97,24 +97,33 @@ class VilaAdapter(VLMAdapter):
                 .cuda()
             )
 
-        # VILA uses media={"image": [tensors]} instead of images=
+        # VILA uses media={"image": [tensors]} + media_config
         media = {}
+        media_config = {}
         if image_tensor is not None:
             media = {"image": [image_tensor]}
+            media_config = {"image": {}}
 
         with torch.inference_mode():
             output_ids = self.model.generate(
                 input_ids,
                 media=media,
+                media_config=media_config,
                 do_sample=temperature > 0,
                 temperature=temperature if temperature > 0 else None,
                 max_new_tokens=max_tokens,
                 use_cache=True,
             )
 
-        text = self.tokenizer.decode(
-            output_ids[0, input_ids.shape[1]:], skip_special_tokens=True
-        ).strip()
+        # VILA's generate may return only new tokens (not input+output)
+        if output_ids.shape[1] > input_ids.shape[1]:
+            text = self.tokenizer.decode(
+                output_ids[0, input_ids.shape[1]:], skip_special_tokens=True
+            ).strip()
+        else:
+            text = self.tokenizer.decode(
+                output_ids[0], skip_special_tokens=True
+            ).strip()
 
         if stream:
             async def _stream():
