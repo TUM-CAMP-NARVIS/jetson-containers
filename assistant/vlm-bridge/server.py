@@ -116,7 +116,10 @@ def _make_chunk(content: str, model: str, finish_reason=None) -> str:
 @app.post("/v1/chat/completions")
 async def chat_completions(req: ChatRequest):
     images = await _extract_images(req.messages)
-    messages = [m.model_dump() for m in req.messages]
+    messages = [
+        m.model_dump() if hasattr(m, "model_dump") else m.dict()
+        for m in req.messages
+    ]
     model_id = adapter.model_name()
 
     if req.stream:
