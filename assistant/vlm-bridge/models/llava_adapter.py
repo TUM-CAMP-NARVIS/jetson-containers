@@ -21,8 +21,10 @@ class LlavaAdapter(VLMAdapter):
         from llava.mm_utils import get_model_name_from_path
 
         model_name = get_model_name_from_path(self.model_path)
+        if model_name is None:
+            model_name = self.model_path.split("/")[-1]
         self.tokenizer, self.model, self.image_processor, self.context_len = (
-            load_pretrained_model(self.model_path, None, model_name)
+            load_pretrained_model(self.model_path, model_name)
         )
 
     def model_name(self) -> str:

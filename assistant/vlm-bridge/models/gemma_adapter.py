@@ -2,7 +2,7 @@ import os
 import torch
 from typing import AsyncIterator
 from PIL import Image
-from transformers import AutoProcessor, Gemma3ForConditionalGeneration
+from transformers import AutoProcessor, AutoModelForCausalLM
 
 from .base import VLMAdapter
 
@@ -16,7 +16,7 @@ class GemmaAdapter(VLMAdapter):
     def load(self):
         dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
         self.processor = AutoProcessor.from_pretrained(self.model_id)
-        self.model = Gemma3ForConditionalGeneration.from_pretrained(
+        self.model = AutoModelForCausalLM.from_pretrained(
             self.model_id,
             torch_dtype=dtype,
             device_map="cuda",

@@ -7,7 +7,7 @@ services:
   # ── Always-on services ──────────────────────────────
 
   webui:
-    image: ${OPEN_WEBUI_IMAGE:-dustynv/open-webui:latest}
+    image: ${OPEN_WEBUI_IMAGE:-open-webui:r36.4.tegra-aarch64-cu126-22.04-cuda}
     container_name: assistant-webui
     ports:
       - "8080:8080"
@@ -34,11 +34,11 @@ services:
     restart: unless-stopped
 
   stt:
-    image: ${SPEACHES_IMAGE:-dustynv/speaches:latest}
+    image: ${SPEACHES_IMAGE:-dustynv/speaches:r36.4.0-cu128-24.04}
     container_name: assistant-stt
     <<: *gpu
     ports:
-      - "8000:8000"
+      - "8010:8000"
     volumes:
       - models-cache:/data/models
     networks:
@@ -46,7 +46,7 @@ services:
     restart: unless-stopped
 
   tts:
-    image: ${KOKORO_TTS_IMAGE:-dustynv/kokoro-tts:fastapi-latest}
+    image: ${KOKORO_TTS_IMAGE:-dustynv/kokoro-tts:fastapi-r36.4.0-cu128-24.04}
     container_name: assistant-tts
     <<: *gpu
     ports:
