@@ -20,14 +20,26 @@ class VilaAdapter(VLMAdapter):
     def load(self):
         from llava.model.builder import load_pretrained_model
         from llava.mm_utils import get_model_name_from_path
+        import transformers
+
+        # Patch resize_token_embeddings to avoid MAGMA requirement on Jetson
+        _orig_resize = transformers.PreTrainedModel.resize_token_embeddings
+
+        def _safe_resize(self_model, new_num_tokens=None, **kwargs):
+            kwargs["mean_resizing"] = False
+            return _orig_resize(self_model, new_num_tokens, **kwargs)
+
+        transformers.PreTrainedModel.resize_token_embeddings = _safe_resize
 
         model_name = get_model_name_from_path(self.model_path)
         if model_name is None:
-            # HuggingFace model ID — extract name from path
             model_name = self.model_path.split("/")[-1]
         self.tokenizer, self.model, self.image_processor, self.context_len = (
             load_pretrained_model(self.model_path, model_name)
         )
+
+        # Restore original
+        transformers.PreTrainedModel.resize_token_embeddings = _orig_resize
 
     def model_name(self) -> str:
         return self.model_path
@@ -40,15 +52,11 @@ class VilaAdapter(VLMAdapter):
         temperature: float = 0.7,
         stream: bool = False,
     ) -> AsyncIterator[str] | str:
-        from llava.constants import (
-            IMAGE_TOKEN_INDEX,
-            DEFAULT_IMAGE_TOKEN,
-            DEFAULT_IM_START_TOKEN,
-            DEFAULT_IM_END_TOKEN,
-        )
-        from llava.conversation import conv_templates, SeparatorStyle
-        from llava.mm_utils import tokenizer_image_token, KeywordsStoppingCriteria
+        from llava.constants import DEFAULT_IMAGE_TOKEN
+        from llava.conversation import conv_templates
+        from llava.mm_utils import tokenizer_image_token
 
+        # Extract last user text prompt
         prompt_text = ""
         for msg in reversed(messages):
             content = msg.get("content", "")
@@ -61,30 +69,24 @@ class VilaAdapter(VLMAdapter):
                             prompt_text = part["text"]
                 break
 
+        # Build conversation with image token
         conv = conv_templates[self.conv_mode].copy()
-        if self.model.config.mm_use_im_start_end:
-            inp = (
-                DEFAULT_IM_START_TOKEN
-                + DEFAULT_IMAGE_TOKEN
-                + DEFAULT_IM_END_TOKEN
-                + "\n"
-                + prompt_text
-            )
-        else:
+        if images:
             inp = DEFAULT_IMAGE_TOKEN + "\n" + prompt_text
+        else:
+            inp = prompt_text
 
         conv.append_message(conv.roles[0], inp)
         conv.append_message(conv.roles[1], None)
         full_prompt = conv.get_prompt()
 
         input_ids = (
-            tokenizer_image_token(
-                full_prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt"
-            )
+            tokenizer_image_token(full_prompt, self.tokenizer, return_tensors="pt")
             .unsqueeze(0)
             .cuda()
         )
 
+        # Process image
         image_tensor = None
         if images:
             image_tensor = (
@@ -95,24 +97,19 @@ class VilaAdapter(VLMAdapter):
                 .cuda()
             )
 
-        stop_str = (
-            conv.sep
-            if conv.sep_style != SeparatorStyle.TWO
-            else conv.sep2
-        )
-        stopping_criteria = KeywordsStoppingCriteria(
-            [stop_str], self.tokenizer, input_ids
-        )
+        # VILA uses media={"image": [tensors]} instead of images=
+        media = {}
+        if image_tensor is not None:
+            media = {"image": [image_tensor]}
 
         with torch.inference_mode():
             output_ids = self.model.generate(
-                inputs=input_ids,
-                images=image_tensor,
+                input_ids,
+                media=media,
                 do_sample=temperature > 0,
                 temperature=temperature if temperature > 0 else None,
                 max_new_tokens=max_tokens,
                 use_cache=True,
-                stopping_criteria=[stopping_criteria],
             )
 
         text = self.tokenizer.decode(

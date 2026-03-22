@@ -1,10 +1,16 @@
 ARG BASE_IMAGE
 FROM ${BASE_IMAGE}
 
-# Install/upgrade deps — use PyPI directly to avoid unreachable Jetson index issues
-# Upgrade transformers for Gemma-3 vision support (needs >=4.50)
+# Install deps — use PyPI directly to avoid unreachable Jetson index issues
+# UPGRADE_TRANSFORMERS=1 upgrades transformers for Gemma-3 vision (needs >=4.50)
+# VILA/LLaVA need the base image's transformers (4.46), so skip upgrade for them
+ARG UPGRADE_TRANSFORMERS=0
 RUN pip install --no-cache-dir --extra-index-url https://pypi.org/simple/ \
-    fastapi uvicorn pillow httpx "transformers>=4.50" accelerate
+    fastapi uvicorn pillow httpx && \
+    if [ "$UPGRADE_TRANSFORMERS" = "1" ]; then \
+        pip install --no-cache-dir --extra-index-url https://pypi.org/simple/ \
+            "transformers>=4.50" accelerate; \
+    fi
 
 COPY server.py /opt/vlm-bridge/
 COPY models/ /opt/vlm-bridge/models/
